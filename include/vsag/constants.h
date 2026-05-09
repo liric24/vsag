@@ -39,6 +39,8 @@ extern const char* const DATASET_PATHS;
 extern const char* const EXTRA_INFOS;
 extern const char* const EXTRA_INFO_SIZE;
 extern const char* const VECTOR_COUNTS;
+extern const char* const MULTI_VECTORS;
+extern const char* const MULTI_VECTOR_DIM;
 
 extern const char* const HNSW_DATA;
 extern const char* const CONJUGATE_GRAPH_DATA;
@@ -101,6 +103,7 @@ extern const char* const HNSW_PARAMETER_M;
 extern const char* const HNSW_PARAMETER_CONSTRUCTION;
 extern const char* const HNSW_PARAMETER_REVERSED_EDGES;
 extern const char* const HNSW_PARAMETER_SKIP_RATIO;
+extern const char* const HNSW_PARAMETER_SKIP_STRATEGY;
 
 extern const char* const INDEX_PARAM;
 
@@ -190,6 +193,7 @@ extern const char* const HGRAPH_PARAMETER_HOPS_LIMIT;
 extern const char* const HGRAPH_EXTRA_INFO_SIZE;
 extern const char* const HGRAPH_SUPPORT_DUPLICATE;
 extern const char* const HGRAPH_SUPPORT_TOMBSTONE;
+extern const char* const HGRAPH_LABEL_REMAP_TYPE;
 extern const char* const HGRAPH_USE_EXTRA_INFO_FILTER;
 extern const char* const STORE_RAW_VECTOR;
 extern const char* const RAW_VECTOR_IO_TYPE;

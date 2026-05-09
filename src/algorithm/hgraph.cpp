@@ -440,6 +440,12 @@ HGraph::map_hgraph_param(const JsonType& hgraph_json) {
             {
                 SUPPORT_TOMBSTONE,
             },
+        },
+        {
+            HGRAPH_LABEL_REMAP_TYPE,
+            {
+                LABEL_REMAP_TYPE_KEY,
+            },
         }};
     const std::string hgraph_params_template =
         R"(
@@ -501,6 +507,7 @@ HGraph::map_hgraph_param(const JsonType& hgraph_json) {
             }
         },
         "{STORE_RAW_VECTOR_KEY}": false,
+        "{LABEL_REMAP_TYPE_KEY}": "{LABEL_REMAP_TYPE_VALUE_PG}",
         "{RAW_VECTOR_KEY}": {
             "{IO_PARAMS_KEY}": {
                 "{TYPE_KEY}": "{IO_TYPE_VALUE_BLOCK_MEMORY_IO}",
@@ -670,17 +677,32 @@ HGraph::build_by_odescent(const DatasetPtr& data) {
     const auto* labels = data->GetIds();
     const auto* vectors = data->GetFloat32Vectors();
     const auto* extra_infos = data->GetExtraInfos();
-    auto inner_ids = this->get_unique_inner_ids(total);
-    Vector<Vector<InnerIdType>> route_graph_ids(allocator_);
-    InnerIdType cur_size = 0;
+    Vector<int64_t> valid_indices(allocator_);
+    UnorderedSet<LabelType> seen_labels(allocator_);
     for (int64_t i = 0; i < total; ++i) {
         auto label = labels[i];
-        if (this->label_table_->CheckLabel(label)) {
+        if (this->label_table_->CheckLabel(label) or seen_labels.find(label) != seen_labels.end()) {
             failed_ids.emplace_back(label);
             continue;
         }
+        seen_labels.insert(label);
+        valid_indices.emplace_back(i);
+    }
+    auto inner_ids = this->get_unique_inner_ids(static_cast<InnerIdType>(valid_indices.size()));
+    auto current_count = total_count_.load();
+    uint64_t new_ids_count = 0;
+    for (auto inner_id : inner_ids) {
+        if (inner_id >= current_count) {
+            ++new_ids_count;
+        }
+    }
+    this->resize(current_count + new_ids_count);
+    this->total_count_ += new_ids_count;
+    Vector<Vector<InnerIdType>> route_graph_ids(allocator_);
+    for (InnerIdType cur_size = 0; cur_size < valid_indices.size(); ++cur_size) {
+        auto i = valid_indices[cur_size];
+        auto label = labels[i];
         InnerIdType inner_id = inner_ids.at(cur_size);
-        cur_size++;
         this->label_table_->Insert(inner_id, label);
         this->basic_flatten_codes_->InsertVector(vectors + dim_ * i, inner_id);
         if (use_reorder_) {
@@ -702,7 +724,6 @@ HGraph::build_by_odescent(const DatasetPtr& data) {
             }
         }
     }
-    this->resize(total_count_);
     auto build_data = (use_reorder_ and not build_by_base_) ? this->high_precise_codes_
                                                             : this->basic_flatten_codes_;
     {
@@ -777,8 +798,10 @@ HGraph::Add(const DatasetPtr& data, AddMode mode) {
         {
             std::scoped_lock lock(this->add_mutex_);
             inner_id = this->get_unique_inner_ids(1).at(0);
-            uint64_t new_count = total_count_;
-            this->resize(new_count);
+            if (inner_id >= total_count_) {
+                this->resize(total_count_.load() + 1);
+                ++total_count_;
+            }
         }
 
         {
@@ -1215,13 +1238,12 @@ HGraph::serialize_basic_info_v0_14(StreamWriter& writer) const {
     StreamWriter::WriteObj(writer, capacity);
     StreamWriter::WriteVector(writer, this->label_table_->label_table_);
 
-    uint64_t size = this->label_table_->label_remap_.size();
+    uint64_t size = this->label_table_->GetRemapSize();
     StreamWriter::WriteObj(writer, size);
-    for (const auto& pair : this->label_table_->label_remap_) {
-        auto key = pair.first;
+    this->label_table_->ForEachRemap([&writer](LabelType key, InnerIdType value) {
         StreamWriter::WriteObj(writer, key);
-        StreamWriter::WriteObj(writer, pair.second);
-    }
+        StreamWriter::WriteObj(writer, value);
+    });
 }
 
 void
@@ -1244,14 +1266,13 @@ HGraph::deserialize_basic_info_v0_14(StreamReader& reader) {
 
     uint64_t size;
     StreamReader::ReadObj(reader, size);
-    this->label_table_->label_remap_.clear();
-    this->label_table_->label_remap_.reserve(size);
+    this->label_table_->ResetRemap(size);
     for (uint64_t i = 0; i < size; ++i) {
         LabelType key;
         StreamReader::ReadObj(reader, key);
         InnerIdType value;
         StreamReader::ReadObj(reader, value);
-        this->label_table_->label_remap_.emplace(key, value);
+        this->label_table_->InsertRemap(key, value);
     }
     // Restore total_count from label_remap size
     this->label_table_->total_count_.store(static_cast<int64_t>(size));
@@ -1333,13 +1354,12 @@ HGraph::serialize_label_info(StreamWriter& writer) const {
     }
 
     StreamWriter::WriteVector(writer, this->label_table_->label_table_);
-    uint64_t size = this->label_table_->label_remap_.size();
+    uint64_t size = this->label_table_->GetRemapSize();
     StreamWriter::WriteObj(writer, size);
-    for (const auto& pair : this->label_table_->label_remap_) {
-        auto key = pair.first;
+    this->label_table_->ForEachRemap([&writer](LabelType key, InnerIdType value) {
         StreamWriter::WriteObj(writer, key);
-        StreamWriter::WriteObj(writer, pair.second);
-    }
+        StreamWriter::WriteObj(writer, value);
+    });
 }
 
 void
@@ -1352,14 +1372,13 @@ HGraph::deserialize_label_info(StreamReader& reader) const {
     StreamReader::ReadVector(reader, this->label_table_->label_table_);
     uint64_t size;
     StreamReader::ReadObj(reader, size);
-    this->label_table_->label_remap_.clear();
-    this->label_table_->label_remap_.reserve(size);
+    this->label_table_->ResetRemap(size);
     for (uint64_t i = 0; i < size; ++i) {
         LabelType key;
         StreamReader::ReadObj(reader, key);
         InnerIdType value;
         StreamReader::ReadObj(reader, value);
-        this->label_table_->label_remap_.emplace(key, value);
+        this->label_table_->InsertRemap(key, value);
     }
     this->label_table_->total_count_.store(static_cast<int64_t>(size));
 }
@@ -2243,6 +2262,10 @@ HGraph::GetVectorByInnerId(InnerIdType inner_id, float* data) const {
     codes = (create_new_raw_vector_) ? raw_vector_ : codes;
     bool release;
     const auto* buffer = codes->GetCodesById(inner_id, release);
+    if (buffer == nullptr) {
+        throw VsagException(ErrorType::INTERNAL_ERROR,
+                            fmt::format("failed to get vector by inner id {}", inner_id));
+    }
     codes->Decode(buffer, data);
     if (release) {
         codes->Release(buffer);

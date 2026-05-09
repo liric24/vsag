@@ -43,6 +43,8 @@ const char* const DATASET_PATHS = "paths";
 const char* const EXTRA_INFOS = "extra_infos";
 const char* const EXTRA_INFO_SIZE = "extra_info_size";
 const char* const VECTOR_COUNTS = "vector_counts";
+const char* const MULTI_VECTORS = "multi_vectors";
+const char* const MULTI_VECTOR_DIM = "multi_vector_dim";
 
 const char* const HNSW_DATA = "hnsw_data";
 const char* const CONJUGATE_GRAPH_DATA = "conjugate_graph_data";
@@ -106,6 +108,7 @@ const char* const HNSW_PARAMETER_M = "max_degree";
 const char* const HNSW_PARAMETER_CONSTRUCTION = "ef_construction";
 const char* const HNSW_PARAMETER_REVERSED_EDGES = "use_reversed_edges";
 const char* const HNSW_PARAMETER_SKIP_RATIO = "skip_ratio";
+const char* const HNSW_PARAMETER_SKIP_STRATEGY = "skip_strategy";
 
 const char* const INDEX_PARAM = "index_param";
 
@@ -170,6 +173,7 @@ const char* const HGRAPH_PARAMETER_HOPS_LIMIT = "hops_limit";
 const char* const HGRAPH_EXTRA_INFO_SIZE = "extra_info_size";
 const char* const HGRAPH_SUPPORT_DUPLICATE = "support_duplicate";
 const char* const HGRAPH_SUPPORT_TOMBSTONE = "support_tomb_stone";
+const char* const HGRAPH_LABEL_REMAP_TYPE = "label_remap_type";
 const char* const HGRAPH_USE_EXTRA_INFO_FILTER = "use_extra_info_filter";
 const char* const STORE_RAW_VECTOR = "store_raw_vector";
 const char* const RAW_VECTOR_IO_TYPE = "raw_vector_io_type";

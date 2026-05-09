@@ -113,7 +113,7 @@ private:
     DISTFUNC fstdistfunc_{nullptr};
     void* dist_func_param_{nullptr};
 
-    vsag::PGUnorderedMap<LabelType, InnerIdType> label_lookup_;
+    vsag::UnorderedMap<LabelType, InnerIdType> label_lookup_;
 
     std::default_random_engine level_generator_{2021};
     mutable std::mutex level_generator_mutex_;
@@ -130,7 +130,7 @@ private:
     bool allow_replace_deleted_{false};
 
     std::mutex deleted_elements_lock_{};  // lock for deleted_elements_
-    vsag::PGUnorderedMap<LabelType, InnerIdType>
+    vsag::UnorderedMap<LabelType, InnerIdType>
         deleted_elements_;  // contains labels and internal ids of deleted elements
 
     bool immutable_{false};
@@ -270,7 +270,7 @@ public:
         return num_deleted_;
     }
 
-    const vsag::PGUnorderedMap<LabelType, InnerIdType>&
+    const vsag::UnorderedMap<LabelType, InnerIdType>&
     getDeletedElements() const override {
         return deleted_elements_;
     }
@@ -285,6 +285,8 @@ public:
                       uint64_t ef,
                       const vsag::FilterPtr is_id_allowed = nullptr,
                       const float skip_ratio = 0.9f,
+                      vsag::FilterSearchSkipStrategyType skip_strategy_type =
+                          vsag::FilterSearchSkipStrategyType::DETERMINISTIC_ACCUMULATIVE,
                       vsag::Allocator* allocator = nullptr,
                       vsag::IteratorFilterContext* iter_ctx = nullptr) const;
 
@@ -463,6 +465,8 @@ public:
               uint64_t ef,
               const vsag::FilterPtr is_id_allowed = nullptr,
               const float skip_ratio = 0.9f,
+              vsag::FilterSearchSkipStrategyType skip_strategy_type =
+                  vsag::FilterSearchSkipStrategyType::DETERMINISTIC_ACCUMULATIVE,
               vsag::Allocator* allocator = nullptr,
               vsag::IteratorFilterContext* iter_ctx = nullptr,
               bool is_last_filter = false) const override;

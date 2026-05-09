@@ -5,6 +5,20 @@
 VSAG is a high-performance vector indexing library for similarity search, written primarily in C++
 with Python bindings provided by `pyvsag`.
 
+## Where To Learn About The Project
+
+Before making non-trivial changes, consult the project documentation:
+
+- The official documentation site: <https://vsag.io/docs> (English and Chinese versions are
+  available, including index parameters, best practices, performance references, and the
+  `eval_performance` tool guide).
+- The in-repo `docs/` directory, which mirrors the website source under `docs/docs/{en,zh}/src/`
+  and also contains design notes (e.g. `docs/hgraph.md`, `docs/ivf.md`, `docs/sindi.md`,
+  `docs/eval_performance.md`, `docs/dataset_format.md`).
+
+When updating user-facing behavior, keep both the website docs and any related in-repo READMEs
+(`tools/eval/README.md`, `tools/eval/README_zh.md`, etc.) in sync.
+
 ## What To Optimize For
 
 - Preserve API compatibility unless a breaking change is explicitly intended.
@@ -106,11 +120,16 @@ Update relevant docs when behavior changes:
 - Commit messages should follow Conventional Commits, such as `feat:`, `fix:`, `docs:`, or
   `chore:`.
 - Commits in this project are expected to use DCO sign-off (`git commit -s`).
-- For co-developed changes, include a `Signed-off-by:` trailer for each contributor.
-- If dual sign-off is requested, include both the requester's identity and the current agent
-  identity in the `Signed-off-by:` trailers.
-- Determine the agent sign-off at execution time from the active agent name and model name, and use
-  the format `AgentName (ModelName)`.
+- Only humans can legally certify the DCO; AI coding agents **must not** add their own
+  `Signed-off-by` trailer. The human submitter is responsible for reviewing AI-generated
+  changes, ensuring license compliance, and taking full responsibility for the contribution.
+- For changes produced with AI assistance, attribute the agent with an `Assisted-by:` trailer
+  in the form `Assisted-by: AgentName:ModelVersion` (see the
+  [Linux kernel AI Coding Assistants policy](https://docs.kernel.org/process/coding-assistants.html)).
+  Determine `AgentName` and `ModelVersion` at execution time from the active agent name and
+  model name (e.g. `Assisted-by: OpenCode:claude-opus-4.7`).
+- Trailer order: place the human `Signed-off-by:` first, followed by the `Assisted-by:` line
+  for the AI agent.
 - When using skip-CI commit messages, follow the repository convention and place `[skip ci]` at the
   beginning of the subject line.
 
@@ -123,8 +142,35 @@ Every pull request **must** have two labels before it can be merged:
 
 Mergify enforces these via check runs. Always add both labels when creating a PR.
 
+## Filing Issues With An Agent
+
+Agents are also expected to help users file high-quality issues. The shared
+workflow lives in `.github/agent-prompts/create-issue.md` and the writing
+rules live in `.github/ISSUE_TEMPLATE/ISSUE_GUIDE.md`. Both Claude Code,
+OpenCode and Codex expose this workflow as a `/create-issue` slash command
+(see `.claude/commands/`, `.opencode/command/`, `.codex/prompts/`).
+
+When drafting an issue:
+
+- Map every required field of the chosen YAML template under
+  `.github/ISSUE_TEMPLATE/`. Use `// TODO` for genuinely unknown values.
+- Cite sources as `path:line` for repo references and full URLs for
+  `vsag.io/docs` pages.
+- Run `gh issue list --repo antgroup/vsag --search ... --state all --limit 5`
+  and append the matches under a `## Related issues` section. Do not block
+  creation on duplicates; the maintainers will close as needed.
+- Append a footer of the form
+  `_Drafted with AI assistant: <AgentName>:<ModelVersion>_` for transparency.
+  Do **not** add `Signed-off-by:` to issues — DCO applies only to commits.
+- Show a dry-run preview and only call `gh issue create` after the user
+  confirms. On failure, fall back to `gh issue create --web`.
+
+A shell wrapper is provided at `tools/issue-helper/new-issue.sh` for users
+who prefer not to drive the agent's slash command directly.
+
 ## References
 
 - `README.md`
 - `CONTRIBUTING.md`
 - `DEVELOPMENT.md`
+- `.github/ISSUE_TEMPLATE/ISSUE_GUIDE.md`
